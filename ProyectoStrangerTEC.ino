@@ -86,6 +86,8 @@ String predefined[26] = { "ALFA", "BRAVO", "CHARLIE", "DELTA", "ECO", "FOXTROT",
 String selectedWord = "";
 String playerAWord = "";
 String playerBWord = "";
+
+String playerWord = "";
 String globalWord = "";
 
 int playerAScore = 0;
@@ -279,11 +281,14 @@ void saveLetter() {
   }
 
   if (ind == 39) {
-    if(gamemode == 24){
+    if (gamemode == 12){
+      playerWord = globalWord;
+      gamemode = 13;
+    }
+    else if (gamemode == 24) {
       playerBWord = globalWord;
       gamemode = 25;
-    }
-    else if (gamemode == 27){
+    } else if (gamemode == 27) {
       playerAWord = globalWord;
       gamemode = 28;
     }
@@ -333,7 +338,7 @@ void loop() {
   }
 
   if (gamemode == 1) {
-    typeWrite("Por favor, selecciona un modo de juego escribiendo su número.", 25);
+    typeWrite("Selecciona un modo de juego escribiendo su número.", 25);
     Serial.println("1. Modo transmisión simple.");
     Serial.println("2. Modo transmisión y escucha.");
 
@@ -345,6 +350,118 @@ void loop() {
     } else {
       Serial.println("Error: Esa no es una opción válida.");
       gamemode = 1;
+      delay(1000);
+    }
+    Serial.println("");
+  }
+
+  if (gamemode == 10) {
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    typeWrite("--- Modo transmisión simple ---", 25);
+    delay(1000);
+    typeWrite("¿Quieres ver las instrucciones? (Escribe SI/NO)", 15);
+
+    String option = input();
+    if (option == "SI" || option == "Si" || option == "si" || option == "S" || option == "s") {
+      typeWrite("Instrucciones:", 15);
+      delay(500);
+      typeWrite("1. Puedes escribir palabras en morse y compararlas con una lista predefinida.", 20);
+      delay(250);
+      typeWrite("2. Para escribir en morse debes pulsar el botón en lapsos cortos (.) o largos (-).", 20);
+      delay(250);
+      typeWrite("3. Dada una combinación de pulsos, debes esperar, y se traducirá a una letra.", 20);
+      delay(300);
+      typeWrite("4. Combina letras para formar dicha palabra.", 20);
+      delay(300);
+      typeWrite("5. Cuando hayas terminado de escribir, envía 6 pulsos cortos (.).", 20);
+      delay(300);
+      typeWrite("6. Se evaluará lo que hayas escrito y se te indicará tu puntaje.", 20);
+      delay(1000);
+      Serial.println("");
+      Serial.println("Escribe cualquier cosa cuando estés listo.");
+      input();
+    }
+    Serial.println();
+    gamemode = 11;
+  }
+
+  if (gamemode == 11) {
+    typeWrite("Recuerda: cuando hayas terminado, envía 6 puntos (.)", 30);
+    delay(1000);
+    typeWrite("Ya puedes comenzar a escribir.", 20);
+    gamemode=12;
+  }
+
+  if (gamemode == 13) {
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    delay(1000);
+    Serial.println("===================");
+    typeWrite("--- Resultados ---", 100);
+    Serial.println("===================");
+    delay(1000);
+    Serial.println("");
+
+
+    int playerScore = 0;
+    String similar = "";
+    for (int i = 0; i < 26; i++) {
+      if (playerWord[0] == predefined[i][0]) {
+        similar = predefined[i];
+      }
+    }
+
+    for (int x = 0; x < similar.length(); x++) {
+      if (playerWord[x] == similar[x]) {
+        playerScore++;
+      }
+    }
+
+    String pScoreTxt = String(playerScore);
+    String pStatTxt = "";
+    if (playerScore == 0) {
+      pStatTxt = "No lograste acertar ninguna letra.";
+    } else if (playerScore > 0 && playerScore < similar.length()) {
+      pStatTxt = "Estuviste cerca. Sigue intentándolo.";
+    } else if (playerScore == similar.length()) {
+      pStatTxt = "Excelente. Acertaste la palabra.";
+    }
+
+    typeWrite("Palabra escrita: " + playerWord, 50);
+    delay(750);
+
+    typeWrite("Palabra similar: " + similar, 75);
+    delay(750);
+
+    Serial.println("");
+
+    typeWrite("Letras correctas: " + pScoreTxt, 50);
+    delay(500);
+
+    Serial.println("");
+    typeWrite(pStatTxt, 40);
+
+    delay(2500);
+    Serial.println("");
+    playerWord = "";
+    playerScore=0;
+
+    gamemode=14;
+  }
+
+
+  if(gamemode == 14){
+    typeWrite("¿Qué deseas hacer ahora?.", 25);
+    Serial.println("1. Jugar otra partida.");
+    Serial.println("2. Volver al menú principal.");
+
+    int option = input().toInt();
+    if (option == 1) {
+      gamemode = 11;
+    } else if (option == 2) {
+      reset();
+    } else {
+      Serial.println("Error: Esa no es una opción válida.");
+      gamemode = 14;
       delay(1000);
     }
     Serial.println("");
@@ -395,6 +512,7 @@ void loop() {
     Serial.println("===========================");
     typeWrite("--- Turno del jugador A ---", 40);
     Serial.println("===========================");
+    Serial.println("");
     delay(1000);
 
     gamemode = 22;
@@ -413,7 +531,7 @@ void loop() {
     typeWrite("--- Turno del jugador B ---", 40);
     Serial.println("===========================");
     delay(1000);
-
+    Serial.println("");
     typeWrite("Escribe la palabra en código morse, usando el botón.", 30);
 
     delay(300);
@@ -451,8 +569,8 @@ void loop() {
         playerBScore++;
       }
     }
-    playerAWord="";
-    playerBWord="";
+    playerAWord = "";
+    playerBWord = "";
 
     Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     Serial.println("====================");
@@ -460,8 +578,10 @@ void loop() {
     Serial.println("====================");
     Serial.println("");
     delay(1000);
-    typeWrite("Se utilizará la misma palabra ya escogida...", 25);
-    delay(2000);
+    typeWrite("Se mostrará de nuevo la palabra ya escogida...", 25);
+    delay(1500);
+    displayWord(selectedWord);
+    delay(1000);
     gamemode = 26;
   }
 
@@ -471,6 +591,7 @@ void loop() {
     typeWrite("--- Turno del jugador A ---", 40);
     Serial.println("===========================");
     delay(1000);
+    Serial.println("");
 
     typeWrite("Escribe la palabra en código morse, usando el botón.", 30);
 
@@ -506,6 +627,7 @@ void loop() {
     typeWrite("--- Turno del jugador B ---", 40);
     Serial.println("===========================");
     delay(1000);
+    Serial.println("");
     typeWrite("Escribe aquí la palabra mostrada.", 20);
     playerBWord = input();
     playerBWord.toUpperCase();
@@ -530,8 +652,8 @@ void loop() {
         playerBScore++;
       }
     }
-    playerAWord="";
-    playerBWord="";
+    playerAWord = "";
+    playerBWord = "";
 
     delay(750);
 
@@ -556,14 +678,38 @@ void loop() {
       typeWrite("El jugador B gana.", 25);
     }
 
+    playerAScore=0;
+    playerBScore=0;
+
     delay(1500);
     Serial.println("");
-    typeWrite("Escribe cualquier cosa para comenzar otra vez.", 50);
-    input();
-    reset();
+    gamemode=30;
   }
 
-  if (gamemode == 24 || gamemode == 27) {
+  if(gamemode == 30){
+    typeWrite("¿Qué deseas hacer ahora?.", 25);
+    Serial.println("1. Jugar otra partida.");
+    Serial.println("2. Volver al menú principal.");
+
+    int option = input().toInt();
+    if (option == 1) {
+      gamemode = 21;
+    } else if (option == 2) {
+      reset();
+    } else {
+      Serial.println("Error: Esa no es una opción válida.");
+      gamemode = 30;
+      delay(1000);
+    }
+    Serial.println("");
+  }
+
+
+
+
+
+
+  if (gamemode == 12 || gamemode == 24 || gamemode == 27) {
     bool val = digitalRead(inputBtn) ? 0 : 1;
 
     if (val == 1) {
@@ -586,10 +732,10 @@ void loop() {
       unsigned long time = end - start;
       state = 0;
 
-      if (time > 65) {
+      if (time > 60) {
         clearDisplay();
 
-        letterParts[letterPointer] = time < 200 ? 0 : 1;
+        letterParts[letterPointer] = time < 300 ? 0 : 1;
         letterPointer += 1;
 
         if (letterPointer == 6) {
