@@ -27,7 +27,7 @@ int leds[16] = { led0_1, led0_2, led0_3, led1, led2, led3, led4, led5, led6, led
 int inputBtn = 50;
 int buzzer = 51;
 
-int gamemode = 24;
+int gamemode = 0;
 int state = 0;
 unsigned long start = 0;
 
@@ -39,7 +39,7 @@ int letterPointer = 0;
 
 String letters[39] = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-" };
 
-int morseCodes[39][6] = {
+int morseCodes[40][6] = {
   { 0, 1, -1, -1, -1, -1 },   // A
   { 1, 0, 0, 0, -1, -1 },     // B
   { 1, 0, 1, 0, -1, -1 },     // C
@@ -78,6 +78,7 @@ int morseCodes[39][6] = {
   { 1, 1, 1, 1, 0, -1 },      // 9
   { 0, 1, 0, 1, 0, -1 },      // +
   { 1, 0, 0, 0, 0, 1 },       // -
+  { 1, 1, 1, 1, 1, 1 },       // END
 };
 
 String predefined[26] = { "ALFA", "BRAVO", "CHARLIE", "DELTA", "ECO", "FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIET", "KILO", "LIMA", "MIKE", "NOVEMBER", "OSCAR", "PAPA", "QUEBEC", "ROMEO", "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY", "XRAY", "YANKEE", "ZULU" };
@@ -86,6 +87,9 @@ String selectedWord = "";
 String playerAWord = "";
 String playerBWord = "";
 String globalWord = "";
+
+int playerAScore = 0;
+int playerBScore = 0;
 
 void updateLeds() {
   shiftOut(dataPin, clockPin, MSBFIRST, highByte(ledState));
@@ -138,11 +142,9 @@ void reset() {
 void setup() {
   pinMode(dataPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
-  
+
   preCheck();
   Serial.begin(9600);
-  Serial.println("1. Arreglar problema de que si pongo un caracter invalido se salta la partida, debe más bien indicar que es invalido o no hacer nada");
-  Serial.println("1. Meter ronda invertida de A vs B a B vs A");
   pinMode(inputBtn, INPUT_PULLUP);
   randomSeed(analogRead(0));
 
@@ -245,7 +247,7 @@ void displayWord(String word) {
 }
 
 int morseIndex(int code[6]) {
-  for (int i = 0; i < 38; i++) {
+  for (int i = 0; i < 40; i++) {
     bool match = true;
     for (int j = 0; j < 6; j++) {
       if (morseCodes[i][j] != code[j]) {
@@ -270,16 +272,24 @@ void saveLetter() {
   String resultLetter = "";
   if (ind >= 0) {
     resultLetter = letters[ind];
+    displayLetter(resultLetter);
+    globalWord += resultLetter;
+  } else {
+    clearDisplay();
   }
 
-  if (gamemode == 24 && resultLetter == "") {
-    playerBWord = globalWord;
+  if (ind == 39) {
+    if(gamemode == 24){
+      playerBWord = globalWord;
+      gamemode = 25;
+    }
+    else if (gamemode == 28){
+      playerAWord = globalWord;
+      gamemode = 29;
+    }
     globalWord = "";
-    gamemode = 25;
+    clearDisplay();
   }
-
-  displayLetter(resultLetter);
-  globalWord += resultLetter;
 
   Serial.print("> ");
   Serial.println(globalWord);
@@ -371,9 +381,12 @@ void loop() {
   if (gamemode == 21) {
     selectedWord = predefined[random(0, 26 + 1)];
     Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    Serial.println("========================================================================");
+    Serial.println("====================");
+    typeWrite("--- Primer ronda ---", 40);
+    Serial.println("====================");
     Serial.println("");
-    typeWrite("Se ha escogido una palabra, la cual será mostrada a continuación...", 40);
+    delay(1000);
+    typeWrite("Se ha escogido una palabra, la cual será mostrada a continuación...", 25);
     delay(1500);
     displayWord(selectedWord);
     delay(1000);
@@ -402,32 +415,34 @@ void loop() {
     delay(1000);
 
     typeWrite("Escribe la palabra en código morse, usando el botón.", 30);
+
     delay(300);
-    typeWrite("Para esto, tienes que hacer pulsaciones cortas o largas.", 30);
-    delay(300);
-    typeWrite("Para escribir una letra, envía una serie de pulsos y espera a que se encienda esa letra.", 30);
-    delay(300);
-    typeWrite("Las letras y palabras que vayas escribiendo se mostrarán aquí.", 30);
-    delay(300);
-    typeWrite("Cuando hayas terminado, envía 6 puntos (.)", 30);
+    typeWrite("¿Quieres ver las instrucciones? (Escribe SI/NO)", 15);
+
+    String option = input();
+    if (option == "SI" || option == "Si" || option == "si") {
+      typeWrite("Instrucciones:", 15);
+      delay(250);
+      typeWrite("Para escribir letras, tienes que hacer pulsaciones cortas o largas.", 30);
+      delay(300);
+      typeWrite("Por cada letra, debes enviar una serie de pulsos y esperar a que se encienda esa letra.", 30);
+      delay(300);
+      typeWrite("Las letras y palabras que vayas escribiendo se mostrarán aquí.", 30);
+      delay(1000);
+      Serial.println("");
+      Serial.println("Escribe cualquier cosa cuando estés listo.");
+      input();
+    }
+    Serial.println();
     delay(1000);
+    typeWrite("Recuerda: cuando hayas terminado, envía 6 puntos (.)", 30);
+    delay(500);
     typeWrite("Ya puedes comenzar a escribir.", 20);
     Serial.println("");
     gamemode = 24;
   }
 
   if (gamemode == 25) {
-    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    delay(1000);
-    Serial.println("===================");
-    typeWrite("--- Resultados ---", 100);
-    Serial.println("===================");
-    delay(1500);
-
-    Serial.println("");
-    int playerAScore = 0;
-    int playerBScore = 0;
-
     for (int x = 0; x < selectedWord.length(); x++) {
       if (playerAWord[x] == selectedWord[x]) {
         playerAScore++;
@@ -436,10 +451,87 @@ void loop() {
         playerBScore++;
       }
     }
+    playerAWord="";
+    playerBWord="";
 
-    typeWrite("Palabra del jugador A: " + playerAWord, 50);
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Serial.println("====================");
+    typeWrite("--- Segunda ronda ---", 40);
+    Serial.println("====================");
+    Serial.println("");
+    delay(1000);
+    typeWrite("Se utilizará la misma palabra ya escogida...", 25);
+    delay(1500);
+    gamemode = 26;
+  }
+
+  if (gamemode == 26) {
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Serial.println("===========================");
+    typeWrite("--- Turno del jugador B ---", 40);
+    Serial.println("===========================");
+    delay(1000);
+    typeWrite("Escribe aquí la palabra mostrada.", 20);
+    playerBWord = input();
+    playerBWord.toUpperCase();
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    gamemode = 27;
+  }
+
+  if (gamemode == 27) {
+    Serial.println("===========================");
+    typeWrite("--- Turno del jugador A ---", 40);
+    Serial.println("===========================");
+    delay(1000);
+
+    typeWrite("Escribe la palabra en código morse, usando el botón.", 30);
+
     delay(300);
-    typeWrite("Palabra del jugador B: " + playerBWord, 50);
+    typeWrite("¿Quieres ver las instrucciones? (Escribe SI/NO)", 15);
+
+    String option = input();
+    if (option == "SI" || option == "Si" || option == "si") {
+      typeWrite("Instrucciones:", 15);
+      delay(250);
+      typeWrite("Para escribir letras, tienes que hacer pulsaciones cortas o largas.", 30);
+      delay(300);
+      typeWrite("Por cada letra, debes enviar una serie de pulsos y esperar a que se encienda esa letra.", 30);
+      delay(300);
+      typeWrite("Las letras y palabras que vayas escribiendo se mostrarán aquí.", 30);
+      delay(1000);
+      Serial.println("");
+      Serial.println("Escribe cualquier cosa cuando estés listo.");
+      input();
+    }
+    Serial.println();
+    delay(1000);
+    typeWrite("Recuerda: cuando hayas terminado, envía 6 puntos (.)", 30);
+    delay(500);
+    typeWrite("Ya puedes comenzar a escribir.", 20);
+    Serial.println("");
+    gamemode = 28;
+  }
+
+  if (gamemode == 29) {
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    delay(1000);
+    Serial.println("===================");
+    typeWrite("--- Resultados ---", 100);
+    Serial.println("===================");
+    delay(1500);
+
+    Serial.println("");
+    for (int x = 0; x < selectedWord.length(); x++) {
+      if (playerAWord[x] == selectedWord[x]) {
+        playerAScore++;
+      }
+      if (playerBWord[x] == selectedWord[x]) {
+        playerBScore++;
+      }
+    }
+    playerAWord="";
+    playerBWord="";
+
     delay(750);
 
     typeWrite("Palabra original: " + selectedWord, 75);
@@ -454,7 +546,7 @@ void loop() {
     typeWrite("Puntaje del jugador B: " + p2Txt + " aciertos.", 50);
     delay(1000);
     Serial.println("");
-    
+
     if (playerAScore == playerBScore) {
       typeWrite("Tenemos un empate.", 25);
     } else if (playerAScore > playerBScore) {
@@ -470,9 +562,9 @@ void loop() {
     reset();
   }
 
-  if (gamemode == 24) {
+  if (gamemode == 24 || gamemode == 28) {
     bool val = digitalRead(inputBtn) ? 0 : 1;
-    
+
     if (val == 1) {
       digitalWrite(buzzer, HIGH);
     } else {
@@ -492,7 +584,7 @@ void loop() {
       unsigned long end = millis();
       unsigned long time = end - start;
       state = 0;
-      
+
       if (time > 65) {
         clearDisplay();
 
@@ -509,17 +601,23 @@ void loop() {
 
         Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         Serial.print("> ");
-        Serial.print(letterParts[0] == 0 ? "." : letterParts[0] == 1 ? "-" : "");
+        Serial.print(letterParts[0] == 0 ? "." : letterParts[0] == 1 ? "-"
+                                                                     : "");
         Serial.print(" ");
-        Serial.print(letterParts[1] == 0 ? "." : letterParts[1] == 1 ? "-" : "");
+        Serial.print(letterParts[1] == 0 ? "." : letterParts[1] == 1 ? "-"
+                                                                     : "");
         Serial.print(" ");
-        Serial.print(letterParts[2] == 0 ? "." : letterParts[2] == 1 ? "-" : "");
+        Serial.print(letterParts[2] == 0 ? "." : letterParts[2] == 1 ? "-"
+                                                                     : "");
         Serial.print(" ");
-        Serial.print(letterParts[3] == 0 ? "." : letterParts[3] == 1 ? "-" : "");
+        Serial.print(letterParts[3] == 0 ? "." : letterParts[3] == 1 ? "-"
+                                                                     : "");
         Serial.print(" ");
-        Serial.print(letterParts[4] == 0 ? "." : letterParts[4] == 1 ? "-" : "");
+        Serial.print(letterParts[4] == 0 ? "." : letterParts[4] == 1 ? "-"
+                                                                     : "");
         Serial.print(" ");
-        Serial.print(letterParts[5] == 0 ? "." : letterParts[5] == 1 ? "-" : "");
+        Serial.print(letterParts[5] == 0 ? "." : letterParts[5] == 1 ? "-"
+                                                                     : "");
         Serial.println(" ");
       }
     }
@@ -532,7 +630,7 @@ void loop() {
       bitSet(tempLedState, led0_3);
 
       for (int i = 0; i < letterPointer; i++) {
-        bitSet(tempLedState, leds[i + 3]); 
+        bitSet(tempLedState, leds[i + 3]);
       }
 
       if (tempLedState != ledState) {
@@ -542,7 +640,7 @@ void loop() {
 
       unsigned long execEnd = millis();
       unsigned long execTime = execEnd - execStart;
-      
+
       if (execTime > 1000) {
         saveLetter();
         listen = 0;
