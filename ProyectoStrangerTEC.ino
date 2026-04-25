@@ -146,7 +146,7 @@ void setup() {
   preCheck();
   Serial.begin(9600);
   pinMode(inputBtn, INPUT_PULLUP);
-  randomSeed(analogRead(0));
+  randomSeed(analogRead(A0));
 
   wdt_disable();
 }
@@ -283,9 +283,9 @@ void saveLetter() {
       playerBWord = globalWord;
       gamemode = 25;
     }
-    else if (gamemode == 28){
+    else if (gamemode == 27){
       playerAWord = globalWord;
-      gamemode = 29;
+      gamemode = 28;
     }
     globalWord = "";
     clearDisplay();
@@ -357,7 +357,7 @@ void loop() {
     typeWrite("¿Quieres ver las instrucciones? (Escribe SI/NO)", 15);
 
     String option = input();
-    if (option == "SI" || option == "Si" || option == "si") {
+    if (option == "SI" || option == "Si" || option == "si" || option == "S" || option == "s") {
       typeWrite("Instrucciones:", 15);
       delay(500);
       typeWrite("1. Se escogerá una palabra al azar.", 20);
@@ -461,24 +461,12 @@ void loop() {
     Serial.println("");
     delay(1000);
     typeWrite("Se utilizará la misma palabra ya escogida...", 25);
-    delay(1500);
+    delay(2000);
     gamemode = 26;
   }
 
   if (gamemode == 26) {
     Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    Serial.println("===========================");
-    typeWrite("--- Turno del jugador B ---", 40);
-    Serial.println("===========================");
-    delay(1000);
-    typeWrite("Escribe aquí la palabra mostrada.", 20);
-    playerBWord = input();
-    playerBWord.toUpperCase();
-    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    gamemode = 27;
-  }
-
-  if (gamemode == 27) {
     Serial.println("===========================");
     typeWrite("--- Turno del jugador A ---", 40);
     Serial.println("===========================");
@@ -490,7 +478,7 @@ void loop() {
     typeWrite("¿Quieres ver las instrucciones? (Escribe SI/NO)", 15);
 
     String option = input();
-    if (option == "SI" || option == "Si" || option == "si") {
+    if (option == "SI" || option == "Si" || option == "si" || option == "S" || option == "s") {
       typeWrite("Instrucciones:", 15);
       delay(250);
       typeWrite("Para escribir letras, tienes que hacer pulsaciones cortas o largas.", 30);
@@ -509,7 +497,20 @@ void loop() {
     delay(500);
     typeWrite("Ya puedes comenzar a escribir.", 20);
     Serial.println("");
-    gamemode = 28;
+    gamemode = 27;
+  }
+
+  if (gamemode == 28) {
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Serial.println("===========================");
+    typeWrite("--- Turno del jugador B ---", 40);
+    Serial.println("===========================");
+    delay(1000);
+    typeWrite("Escribe aquí la palabra mostrada.", 20);
+    playerBWord = input();
+    playerBWord.toUpperCase();
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    gamemode = 29;
   }
 
   if (gamemode == 29) {
@@ -562,7 +563,7 @@ void loop() {
     reset();
   }
 
-  if (gamemode == 24 || gamemode == 28) {
+  if (gamemode == 24 || gamemode == 27) {
     bool val = digitalRead(inputBtn) ? 0 : 1;
 
     if (val == 1) {
