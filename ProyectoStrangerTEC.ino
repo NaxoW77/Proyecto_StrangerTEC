@@ -1,13 +1,13 @@
 #include <avr/wdt.h>
 
-const int dataPin = 2;
-const int clockPin = 3;
-uint16_t ledState = 0;
+// --- Definición de pines y configuración ---
 
+// Leds de fila
 int led0_1 = 0;
 int led0_2 = 1;
 int led0_3 = 2;
 
+// Leds de columna
 int led1 = 3;
 int led2 = 4;
 int led3 = 5;
@@ -22,22 +22,54 @@ int led11 = 13;
 int led12 = 14;
 int led13 = 15;
 
+// Pines y variable de control para el circuito integrado
+const int dataPin = 2;
+const int clockPin = 3;
+uint16_t ledState = 0; // Esta variable se utiliza para indicar el estado y bits al circuito integrado
+
+// Configuración y posiciones de cada led
 int leds[16] = { led0_1, led0_2, led0_3, led1, led2, led3, led4, led5, led6, led7, led8, led9, led10, led11, led12, led13 };
 
+// Pines para el botón y el buzzer
 int inputBtn = 50;
 int buzzer = 51;
 
-int gamemode = 0;
-int state = 0;
-unsigned long start = 0;
 
+
+// --- Variables globales ---
+
+// Variable para llevar el progreso de cada minijuego
+int gamemode = 0;
+
+// Variables de control para las ejecuciones
 int listen = 0;
 unsigned long execStart = 0;
 
+// Variables de control para las pulsaciones dentro de una ejecución
+int state = 0;
+unsigned long start = 0;
+
+// Lista de campos para cada pulsación
+// Donde:
+// → -1 = Nada
+// → 0 = Pulso corto (.)
+// → 1 = Pulso largo (-)
 int letterParts[] = { -1, -1, -1, -1, -1, -1 };
+
+// Cursor o variable de control para recorrer las partes
 int letterPointer = 0;
 
+
+
+// --- Diccionarios ---
+
+// Lista de letras (Abecedario)
 String letters[39] = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-" };
+
+// Lista de códigos morse traducibles a letras, a partir de una lista de partes (llámese letterParts)
+// Donde:
+// → Cada índice de letras coincide con un código en morse, para comparar rápidamente
+// → Mas existe un elemento extra en la lista de morse, que equivale a un [Enter]
 
 int morseCodes[40][6] = {
   { 0, 1, -1, -1, -1, -1 },   // A
@@ -81,91 +113,142 @@ int morseCodes[40][6] = {
   { 1, 1, 1, 1, 1, 1 },       // END
 };
 
+// Lista de palabras predefinidas para utilizar en el programa
 String predefined[26] = { "ALFA", "BRAVO", "CHARLIE", "DELTA", "ECO", "FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIET", "KILO", "LIMA", "MIKE", "NOVEMBER", "OSCAR", "PAPA", "QUEBEC", "ROMEO", "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY", "XRAY", "YANKEE", "ZULU" };
 
+
+// --- Variables de ejecución
+
+// Variable para guardar la palabra escrita en el primer minijuego
+String playerWord = "";
+
+// Variable para guardar la frase globalmente para fácil acceso (Palabra caché)
+String globalWord = "";
+
+// Variable para guardar la frase seleccionada para el segundo minujuego
 String selectedWord = "";
+
+// Variable para guardar las palabras de ambos jugadores en el segundo minijuego
 String playerAWord = "";
 String playerBWord = "";
 
-String playerWord = "";
-String globalWord = "";
-
+// Variables para guardar los puntajes de ambos jugadores en el segundo minijuego
 int playerAScore = 0;
 int playerBScore = 0;
 
+
+
+/// --- Funciones auxiliares ---
+// Estas son funciones que se utilizan para realizar una serie de acciones repetitivas rápidamente
+
+// Función para mostrar el estado actual de las leds dentro del 
 void updateLeds() {
+  // Se optó por utilizar shiftOut() para mover los bits de forma automática y segura
+  // Referencia: https://www.instructables.com/The-74HC164-Shift-Register-and-your-Arduino/
   shiftOut(dataPin, clockPin, MSBFIRST, highByte(ledState));
   shiftOut(dataPin, clockPin, MSBFIRST, lowByte(ledState));
 }
 
+// Función para encender una led específica
 void turnOn(int ledIndex) {
-  bitSet(ledState, ledIndex);
-  updateLeds();
+  bitSet(ledState, ledIndex); // Se coloca el bit que corresponde a esa led
+  updateLeds(); // Se muestra el estado actual
 }
 
+// Función para apagar una led específica
 void turnOff(int ledIndex) {
-  bitClear(ledState, ledIndex);
-  updateLeds();
+  bitClear(ledState, ledIndex); // Se apaga el bit que corresponde a esa led
+  updateLeds(); // Se muestra el estado actual
 }
 
+// Función para apagar todas las leds rápidamente
 void clearDisplay() {
   ledState = 0;
   updateLeds();
 }
 
+// Función auxiliar para comprobar que el circuito integrado, el cableado, las leds y buzzer funcionan adecuadamente rápidamente
 void preCheck() {
+  // Se encienden las leds una a una en orden
   for (int x = 0; x <= 15; x++) {
     turnOn(x);
     delay(10);
   }
   delay(200);
+
+  // Se apagan las leds en orden
   for (int x = 0; x <= 15; x++) {
     turnOff(x);
     delay(10);
   }
   delay(100);
 
+  // Se prueba el buzzer
   pinMode(buzzer, OUTPUT);
   digitalWrite(buzzer, HIGH);
+
+  // Una prueba de encendido total rápido de leds
   for (int x = 0; x <= 15; x++) {
     turnOn(x);
   }
-
   delay(200);
   digitalWrite(buzzer, LOW);
   clearDisplay();
 }
 
+// Función auxiliar para reiniciar el arduino rápidamente
+// Se utilizó el método de reinicio por watchdog
+// Referencia: https://www.instructables.com/The-Arduino-Hang-Guardian-Arduino-Watchdog-Timer-T/
 void reset() {
   wdt_enable(WDTO_15MS);
   while (1) {}
 }
 
+// --- Función principal para iniciar el arduino
 void setup() {
+  // Se definen los pines
   pinMode(dataPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
-
-  preCheck();
-  Serial.begin(9600);
   pinMode(inputBtn, INPUT_PULLUP);
+
+  // Se inicia la comunicación con la computadora
+  Serial.begin(9600)
+
+  // Se coloca una "semilla" para que en la función random() no se repitan secuencias
+  // Se utilizó el método de leer un pin análogo sin conectar, lo que produce ruido por defecto
+  // Referencia: https://docs.arduino.cc/language-reference/en/functions/random-numbers/randomSeed/
   randomSeed(analogRead(A0));
 
+  // Se evita que reset() se active accidentalmente
   wdt_disable();
+
+  // Se realiza la comprobación inicial de los componentes
+  preCheck();
 }
 
+// Función para mostrar una letra específica en el panel
 void displayLetter(String letter, int sound = 0) {
+
+  // Se asegura que la letra esté en mayúsculas para evitar falsas coincidencias
   letter.toUpperCase();
 
+  // Se definen virtualmente las posiciones del tablero
   String row1 = "ABCDEFGHIJKLM";
   String row2 = "NOPQRSTUVWXYZ";
   String row3 = "0123456789+-";
 
+  // Si no se provee una letra, muestra la última posición (Error)
   if (letter == "") {
     turnOn(led0_3);
     turnOn(led13);
   } else {
-    if (row1.indexOf(letter) >= 0) {
+
+    if (row1.indexOf(letter) >= 0) { // Se busca la posición de la letra en base a la primera fila
+
+      // Se enciende el indicador de la primer fila
       turnOn(led0_3);
+
+      // Se enciende la led de la columna correspondiente al índice de la letra en la fila
       if (letter == "A") { turnOn(led1); }
       if (letter == "B") { turnOn(led2); }
       if (letter == "C") { turnOn(led3); }
@@ -179,8 +262,13 @@ void displayLetter(String letter, int sound = 0) {
       if (letter == "K") { turnOn(led11); }
       if (letter == "L") { turnOn(led12); }
       if (letter == "M") { turnOn(led13); }
-    } else if (row2.indexOf(letter) >= 0) {
+
+    } else if (row2.indexOf(letter) >= 0) { // Si no se encontró la letra en la primer fila, se busca su posición en la segunda fila
+      
+      // Se enciende el indicador de la segunda fila
       turnOn(led0_2);
+
+      // Se enciende la led de la columna correspondiente al índice de la letra en la fila
       if (letter == "N") { turnOn(led1); }
       if (letter == "O") { turnOn(led2); }
       if (letter == "P") { turnOn(led3); }
@@ -195,8 +283,12 @@ void displayLetter(String letter, int sound = 0) {
       if (letter == "Y") { turnOn(led12); }
       if (letter == "Z") { turnOn(led13); }
 
-    } else if (row3.indexOf(letter) >= 0) {
+    } else if (row3.indexOf(letter) >= 0) { // Si no se encontró la letra en la segunda fila, se busca su posición en la tercer fila
+
+      // Se enciende el indicador de la tercer fila
       turnOn(led0_1);
+
+      // Se enciende la led de la columna correspondiente al índice de la letra en la fila
       if (letter == "0") { turnOn(led1); }
       if (letter == "1") { turnOn(led2); }
       if (letter == "2") { turnOn(led3); }
@@ -212,8 +304,13 @@ void displayLetter(String letter, int sound = 0) {
     }
   }
 
-  if (sound == 1) {
+  // Reproductor de sonido
+  if (sound == 1) { // Si en el parámetro se pasa "1", se pide que se reproduzca el sonido
+
+    // Variable para buscar una combinación de morse que equivale a la letra
     int soundInd = 0;
+
+    // Se busca la combinación morse
     for (int x = 0; x < 39; x++) {
       if (letters[x] == letter) {
         soundInd = x;
@@ -221,33 +318,40 @@ void displayLetter(String letter, int sound = 0) {
       }
     }
 
+    // Por cada morse, se reproduce un sonido dependiendo de su combinación
     for (int i = 0; i < 6; i++) {
-      if (morseCodes[soundInd][i] == 0) {
+
+      if (morseCodes[soundInd][i] == 0) { // Si el código es 0 (.), se reproduce un pitido corto
         digitalWrite(buzzer, HIGH);
         delay(90);
         digitalWrite(buzzer, LOW);
         delay(90);
-      } else if (morseCodes[soundInd][i] == 1) {
+        
+      } else if (morseCodes[soundInd][i] == 1) { // Si el código es 1 (-), se reproduce un pitido largo
         digitalWrite(buzzer, HIGH);
         delay(400);
         digitalWrite(buzzer, LOW);
         delay(400);
       }
     }
-    delay(500);
+    delay(500); // Pausa entre caracteres
   }
 }
 
+// Función para mostrar cada letra de una palabra, llamando a la función de las letras
 void displayWord(String word) {
+
+  // Se recorre la cadena de caracteres
   for (int i = 0; i < word.length(); i++) {
     String letter = String(word[i]);
-    clearDisplay();
-    displayLetter(letter, 1);
-    delay(1500);
+    clearDisplay(); // Se limpia el panel para evitar sobreescritura
+    displayLetter(letter, 1); // Se muestra la letra correspondiente
+    delay(1500); // Tiempo entre letras
   }
-  clearDisplay();
+  clearDisplay(); // Se limpia el panel tras la sucesión
 }
 
+// Función para encontrar la posición de una letra en base a su combinación
 int morseIndex(int code[6]) {
   for (int i = 0; i < 40; i++) {
     bool match = true;
