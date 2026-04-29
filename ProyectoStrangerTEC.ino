@@ -142,7 +142,7 @@ int playerBScore = 0;
 /// --- Funciones auxiliares ---
 // Estas son funciones pequeñas que se utilizan para realizar una serie de acciones repetitivas rápidamente
 
-// Función para mostrar el estado actual de las leds dentro del
+// Función para mostrar el estado actual de las leds dentro del panel
 void updateLeds() {
   // Se optó por utilizar shiftOut() para mover los bits de forma automática y segura
   // Referencia: https://www.instructables.com/The-74HC164-Shift-Register-and-your-Arduino/
